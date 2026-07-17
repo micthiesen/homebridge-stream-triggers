@@ -18,8 +18,9 @@
       },
       "channelsRefreshInterval": {
         "title": "Channel Refresh Interval (ms)",
-        "description": "How often to re-fetch the channel list and re-sync switches. 0 disables background refresh.",
-        "type": "number",
+        "description": "How often to re-fetch the channel list and re-sync switches. 0 disables all background fetching, including the retry after a failed startup fetch.",
+        "type": "integer",
+        "minimum": 0,
         "default": 3600000
       },
       "channels": {
@@ -88,7 +89,8 @@
       "resetDelay": {
         "title": "Reset Delay (ms)",
         "description": "How long a switch reads \"on\" before auto-resetting to off.",
-        "type": "number",
+        "type": "integer",
+        "minimum": 1,
         "default": 2000
       }
     }

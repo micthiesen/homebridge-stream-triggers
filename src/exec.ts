@@ -1,8 +1,13 @@
 import { type ExecFileException, execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { type Result, tryCatch } from "@micthiesen/mitools/async";
+import { type Result, tryCatch, withTimeout } from "@micthiesen/mitools/async";
 
 const execFileAsync = promisify(execFile);
+
+// execFile's own timeout only kills the child; if the child ignores the signal or a
+// grandchild holds the stdio pipes open, the promise never settles. The outer
+// withTimeout guarantees the caller always gets an answer (and SIGKILL can't be ignored).
+const KILL_GRACE_MS = 5_000;
 
 export interface ExecOutput {
   stdout: string;
@@ -16,10 +21,14 @@ export async function runCommand(
   timeoutMs: number,
 ): Promise<Result<ExecOutput>> {
   return tryCatch(async () => {
-    const { stdout, stderr } = await execFileAsync(file, args, {
-      timeout: timeoutMs,
-      maxBuffer: 16 * 1024 * 1024,
-    });
+    const { stdout, stderr } = await withTimeout(
+      execFileAsync(file, args, {
+        timeout: timeoutMs,
+        killSignal: "SIGKILL",
+        maxBuffer: 16 * 1024 * 1024,
+      }),
+      timeoutMs + KILL_GRACE_MS,
+    );
     return { stdout, stderr };
   });
 }

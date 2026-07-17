@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import type { Logging } from "homebridge";
+import { onTestFinished } from "vitest";
 
 export interface CapturedLog {
   log: Logging;
@@ -36,9 +37,10 @@ export const STUBS_DIR = path.join(import.meta.dirname, "stubs");
 export const ATVREMOTE_STUB = path.join(STUBS_DIR, "atvremote");
 export const YTDLP_STUB = path.join(STUBS_DIR, "yt-dlp");
 
-/** Fresh temp dir + stub log file; sets STUB_LOG for the stub scripts. */
+/** Fresh temp dir (removed after the test) + stub log file; sets STUB_LOG for the stubs. */
 export async function makeStubEnv(): Promise<{ dir: string; stubLog: string }> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "stream-triggers-test-"));
+  onTestFinished(() => fs.rm(dir, { recursive: true, force: true }));
   const stubLog = path.join(dir, "stub.log");
   process.env.STUB_LOG = stubLog;
   delete process.env.ATV_STUB_MODE;
@@ -79,11 +81,9 @@ export async function serveJson(
   };
 }
 
-/** A URL that refuses connections immediately (a just-closed server's port). */
-export async function refusedUrl(): Promise<string> {
-  const server = await serveJson(() => ({ body: {} }));
-  await server.close();
-  return server.url;
+/** A URL that refuses connections immediately (port 1 is never listened on). */
+export function refusedUrl(): string {
+  return "http://127.0.0.1:1/api/trigger-channels";
 }
 
 /** Create <dir>/credentials/<id>/credentials.txt and return the credentials dir. */

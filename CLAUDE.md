@@ -37,8 +37,11 @@ pnpm run test:only     # vitest only
   accessories in `configureAccessory`, syncs switches to config on `didFinishLaunching`
   (register new / update existing / unregister removed), momentary switch semantics,
   fire-and-forget trigger dispatch with per-channel in-flight dedup
-- `src/config.ts` — Zod schema + `parseConfig` (safeParse'd in the platform: invalid
-  config logs an error and runs with no channels, never crashes)
+- `src/config.ts` — Zod schema (`configSchema.safeParse` in the platform: an invalid
+  config logs an error and the plugin goes inert — no fetch, no yt-dlp download, no
+  accessory sync/unregister — until the config is fixed; never crashes).
+  `channelsRetryDelay` (default 60s) is the failed-fetch retry cadence, deliberately
+  absent from config.schema.json; it exists so tests can exercise the retry path.
 - `src/channels.ts` — fetches the channel list from omni-notify's
   `/api/trigger-channels` (see `../omni-notify/src/live-check/triggerChannels.ts`).
   Zero-config default: no `channels` in config → fetch from `channelsUrl`

@@ -44,7 +44,8 @@ streamers skipped), so adding a streamer there is all it takes.
 The list re-syncs hourly (`channelsRefreshInterval`), so new streamers appear without a
 restart. If omni-notify is unreachable at startup, previously-known switches keep working
 from the accessory cache (the channel is stored in each accessory's context) and fetching
-retries every minute until it succeeds.
+retries every minute until it succeeds. Setting `channelsRefreshInterval` to `0` disables
+all background fetching, including that startup retry.
 
 A static list can be set instead (mainly for testing; it disables fetching entirely):
 
@@ -75,7 +76,7 @@ A static list can be set instead (mainly for testing; it disables fetching entir
 | `channelsRefreshInterval` | `3600000` (1h) | How often (ms) to re-fetch the list and re-sync switches. `0` disables background refresh. |
 | `credentialsDir` | `/var/lib/homebridge/appletv-enhanced` | Where homebridge-appletv-enhanced stores Apple TV pairings. |
 | `appleTvId` | auto | Apple TV identifier. Auto-discovered as the single subdirectory of `credentialsDir` containing a `credentials.txt`; set explicitly if there are multiple. |
-| `atvremotePath` | `<credentialsDir>/.venv/bin/atvremote` path | `atvremote` binary from appletv-enhanced's venv (that plugin keeps pyatv updated). |
+| `atvremotePath` | `/var/lib/homebridge/appletv-enhanced/.venv/bin/atvremote` | `atvremote` binary from appletv-enhanced's venv (that plugin keeps pyatv updated). |
 | `ytDlpPath` | self-managed | Override for testing. By default the plugin downloads the latest standalone `yt-dlp` into Homebridge's storage dir and refreshes it when older than 30 days (stale copies break against YouTube within months). |
 | `suffix` | `" Trigger"` | Appended to switch names, avoiding collisions with the "Stream X" scene names. |
 | `resetDelay` | `2000` | How long (ms) a switch reads "on" before auto-resetting. |

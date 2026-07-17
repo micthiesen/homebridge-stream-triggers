@@ -20,13 +20,12 @@ import { StreamLauncher } from "./launcher.js";
 import { PLATFORM_NAME, PLUGIN_NAME } from "./settings.js";
 import { YtDlp } from "./ytdlp.js";
 
-const REFRESH_RETRY_MS = 60_000;
-
 export class StreamTriggersPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
   public readonly Characteristic: typeof Characteristic;
 
   private readonly config: StreamTriggersConfig;
+  private readonly configValid: boolean;
   private readonly accessories = new Map<string, PlatformAccessory>();
   private readonly launchesInFlight = new Set<string>();
   private readonly ytDlp: YtDlp;
@@ -41,11 +40,15 @@ export class StreamTriggersPlatform implements DynamicPlatformPlugin {
     this.Characteristic = api.hap.Characteristic;
 
     const parsed = configSchema.safeParse(rawConfig);
+    this.configValid = parsed.success;
     if (parsed.success) {
       this.config = parsed.data;
     } else {
+      // Going inert (not falling back to defaults) is deliberate: default paths
+      // could hit the wrong binaries/endpoints, and syncing with a guessed config
+      // could unregister working accessories. Cached accessories stay registered.
       this.log.error(
-        `Invalid config, running with no channels: ${parsed.error.message}`,
+        `Invalid config; plugin is inactive until it is fixed: ${parsed.error.message}`,
       );
       this.config = configSchema.parse({});
     }
@@ -59,26 +62,32 @@ export class StreamTriggersPlatform implements DynamicPlatformPlugin {
   }
 
   private async startup(): Promise<void> {
-    try {
-      if (this.config.channels.length > 0) {
-        // Static config override (mainly for testing); no fetching involved.
-        this.syncAccessories(this.config.channels);
+    if (!this.configValid) return;
+    if (this.config.channels.length > 0) {
+      // Static config override (mainly for testing); no fetching involved.
+      this.trySync(this.config.channels);
+    } else {
+      const channels = await fetchChannels(this.config.channelsUrl, this.log);
+      if (channels) {
+        this.trySync(channels);
       } else {
-        const channels = await fetchChannels(this.config.channelsUrl, this.log);
-        if (channels) {
-          this.syncAccessories(channels);
-        } else {
-          this.wireCachedAccessories();
-        }
-        this.scheduleRefresh(
-          channels ? this.config.channelsRefreshInterval : REFRESH_RETRY_MS,
-        );
+        this.wireCachedAccessories();
       }
-    } catch (error) {
-      this.log.error(`Startup failed: ${String(error)}`);
+      // Outside any fallible region: a sync failure must not kill the refresh chain.
+      this.scheduleRefresh(
+        channels ? this.config.channelsRefreshInterval : this.config.channelsRetryDelay,
+      );
     }
     // Non-blocking: download/refresh the managed yt-dlp binary in the background.
     void this.ytDlp.ensureFresh();
+  }
+
+  private trySync(channels: ChannelConfig[]): void {
+    try {
+      this.syncAccessories(channels);
+    } catch (error) {
+      this.log.error(`Failed to sync accessories: ${String(error)}`);
+    }
   }
 
   /**
@@ -89,7 +98,7 @@ export class StreamTriggersPlatform implements DynamicPlatformPlugin {
   private scheduleRefresh(delayMs: number): void {
     if (this.config.channelsRefreshInterval <= 0) return;
     const timer = setTimeout(async () => {
-      let nextDelayMs = REFRESH_RETRY_MS;
+      let nextDelayMs = this.config.channelsRetryDelay;
       try {
         const channels = await fetchChannels(this.config.channelsUrl, this.log);
         if (channels) {
@@ -115,13 +124,19 @@ export class StreamTriggersPlatform implements DynamicPlatformPlugin {
     const configuredUuids = new Set<string>();
 
     for (const channel of channels) {
+      const uuid = this.api.hap.uuid.generate(`${PLUGIN_NAME}.${channel.key}`);
+      // Marked as configured even when skipped below, so a transiently broken
+      // channel entry never unregisters a working accessory (which would strip
+      // its HomeKit room/scene/automation assignments).
+      configuredUuids.add(uuid);
+
       if (channel.type === "youtube" && !channel.url) {
-        this.log.error(`[${channel.key}] YouTube channel is missing "url"; skipping`);
+        this.log.error(
+          `[${channel.key}] YouTube channel is missing "url"; skipping (existing switch retained)`,
+        );
         continue;
       }
 
-      const uuid = this.api.hap.uuid.generate(`${PLUGIN_NAME}.${channel.key}`);
-      configuredUuids.add(uuid);
       const name = `${displayNameFor(channel)}${this.config.suffix}`;
 
       const existing = this.accessories.get(uuid);
@@ -176,6 +191,13 @@ export class StreamTriggersPlatform implements DynamicPlatformPlugin {
     channel: ChannelConfig,
     name: string,
   ): void {
+    accessory
+      .getService(this.Service.AccessoryInformation)
+      ?.setCharacteristic(this.Characteristic.Name, name)
+      .setCharacteristic(this.Characteristic.Manufacturer, "micthiesen")
+      .setCharacteristic(this.Characteristic.Model, "Stream Trigger")
+      .setCharacteristic(this.Characteristic.SerialNumber, channel.key);
+
     const service =
       accessory.getService(this.Service.Switch) ??
       accessory.addService(this.Service.Switch);

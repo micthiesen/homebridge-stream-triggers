@@ -215,15 +215,42 @@ describe("accessory sync", () => {
     expect(harness.captured.messages.join("\n")).toContain('missing "url"');
   });
 
-  it("survives a completely invalid config", () => {
+  it("goes inert on a completely invalid config (no fetch, no yt-dlp, no sync)", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
     const harness = makeHarness(dir, {
       channels: "not-an-array",
       ytDlpPath: YTDLP_STUB,
     });
+    const cached = new FakeAccessory(
+      "Jerma Trigger",
+      "uuid-homebridge-stream-triggers.jerma",
+    );
+    harness.cache(cached);
     harness.boot();
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(harness.registered).toEqual([]);
+    expect(harness.unregistered).toEqual([]);
+    expect(fetchSpy).not.toHaveBeenCalled();
     expect(harness.captured.messages.join("\n")).toContain("Invalid config");
+    fetchSpy.mockRestore();
+  });
+
+  it("retains an existing switch when its youtube channel loses the url", () => {
+    const harness = makeHarness(
+      dir,
+      channelConfig({ channels: [{ key: "destiny", type: "youtube" }] }),
+    );
+    const cached = new FakeAccessory(
+      "Destiny Trigger",
+      "uuid-homebridge-stream-triggers.destiny",
+    );
+    cached.context.channel = { key: "destiny", type: "youtube", url: "https://x/live" };
+    harness.cache(cached);
+    harness.boot();
+
+    expect(harness.unregistered).toEqual([]);
+    expect(harness.captured.messages.join("\n")).toContain('missing "url"');
   });
 });
 
@@ -248,7 +275,7 @@ describe("channel fetching", () => {
   it("falls back to cached accessories (still functional) when unreachable", async () => {
     const harness = makeHarness(
       dir,
-      channelConfig({ channelsUrl: await refusedUrl(), channelsRefreshInterval: 0 }),
+      channelConfig({ channelsUrl: refusedUrl(), channelsRefreshInterval: 0 }),
     );
     const cached = new FakeAccessory(
       "Jerma Trigger",
@@ -271,6 +298,82 @@ describe("channel fetching", () => {
     await vi.waitFor(async () => {
       expect((await readStubLog(stubLog)).join("\n")).toContain("launch_app=tv.twitch");
     });
+  });
+
+  it("retries after a failed startup fetch and recovers", async () => {
+    const server = await serveJson((requestCount) =>
+      requestCount === 1
+        ? { status: 500, body: { error: "still booting" } }
+        : {
+            body: {
+              channels: [{ key: "jerma", displayName: "Jerma", type: "twitch" }],
+            },
+          },
+    );
+    const harness = makeHarness(
+      dir,
+      channelConfig({
+        channelsUrl: server.url,
+        channelsRefreshInterval: 3_600_000,
+        channelsRetryDelay: 25,
+      }),
+    );
+    harness.boot();
+
+    await vi.waitFor(() => {
+      expect(harness.captured.messages.join("\n")).toContain(
+        "Channel list unavailable",
+      );
+    });
+    await vi.waitFor(() => {
+      expect(harness.registered.map((a) => a.displayName)).toEqual(["Jerma Trigger"]);
+    });
+    await server.close();
+  });
+
+  it("propagates a channel type change to an existing switch", async () => {
+    const server = await serveJson(() => ({
+      body: {
+        channels: [
+          {
+            key: "jerma",
+            displayName: "Jerma",
+            type: "youtube",
+            url: "https://www.youtube.com/@jerma/live",
+          },
+        ],
+      },
+    }));
+    const harness = makeHarness(
+      dir,
+      channelConfig({ channelsUrl: server.url, channelsRefreshInterval: 0 }),
+    );
+    const cached = new FakeAccessory(
+      "Jerma Trigger",
+      "uuid-homebridge-stream-triggers.jerma",
+    );
+    cached.context.channel = { key: "jerma", type: "twitch" };
+    harness.cache(cached);
+    harness.boot();
+
+    await vi.waitFor(() => {
+      expect(harness.updated).toContain(cached);
+    });
+    expect(cached.context.channel).toMatchObject({ type: "youtube" });
+
+    // The rewired switch now runs the youtube flow, not the stale twitch one.
+    await cached.onCharacteristic().triggerSet(true);
+    await vi.waitFor(async () => {
+      const lines = (await readStubLog(stubLog)).join("\n");
+      expect(lines).toContain(
+        "yt-dlp --print id --no-warnings https://www.youtube.com/@jerma/live",
+      );
+      expect(lines).toContain(
+        "launch_app=youtube://www.youtube.com/watch?v=fakeVideoId123",
+      );
+    });
+    expect((await readStubLog(stubLog)).join("\n")).not.toContain("tv.twitch");
+    await server.close();
   });
 
   it("re-syncs on the refresh interval, picking up new channels", async () => {

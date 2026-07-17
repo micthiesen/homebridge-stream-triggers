@@ -2,7 +2,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { tryCatch } from "@micthiesen/mitools/async";
 import type { Logging } from "homebridge";
-import { describeExecError, isMissingBinaryError, runCommand } from "./exec.js";
+import {
+  describeExecError,
+  exitCodeOf,
+  isMissingBinaryError,
+  runCommand,
+} from "./exec.js";
 
 const YTDLP_TIMEOUT_MS = 60_000;
 const DOWNLOAD_TIMEOUT_MS = 180_000;
@@ -69,11 +74,14 @@ export class YtDlp {
       if (isMissingBinaryError(result.error)) {
         this.log.error(`${prefix} yt-dlp binary missing at ${binary}`);
         void this.ensureFresh();
-      } else {
-        // Non-zero exit = channel not live. Expected, not an error.
+      } else if (exitCodeOf(result.error) !== undefined) {
+        // A clean non-zero exit = channel not live. Expected, not an error.
         this.log.info(
           `${prefix} Not live (yt-dlp: ${describeExecError(result.error)})`,
         );
+      } else {
+        // Spawn failures (EACCES, ...) and timeouts are real errors.
+        this.log.error(`${prefix} yt-dlp failed: ${describeExecError(result.error)}`);
       }
       return undefined;
     }
