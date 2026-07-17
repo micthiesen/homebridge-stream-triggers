@@ -1,0 +1,60 @@
+{
+  "name": "homebridge-stream-triggers",
+  "displayName": "Homebridge Stream Triggers",
+  "version": "0.1.0",
+  "description": "HomeKit switches that launch live streams (YouTube/Twitch) on an Apple TV via atvremote and yt-dlp.",
+  "keywords": [
+    "homebridge-plugin",
+    "homebridge",
+    "apple-tv",
+    "youtube",
+    "twitch",
+    "livestream",
+    "homeautomation"
+  ],
+  "bugs": {
+    "url": "https://github.com/micthiesen/homebridge-stream-triggers/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/micthiesen/homebridge-stream-triggers.git"
+  },
+  "type": "module",
+  "license": "MIT",
+  "author": "Michael Thiesen",
+  "main": "lib/index.js",
+  "files": [
+    "config.schema.json",
+    "lib"
+  ],
+  "scripts": {
+    "prebuild": "pnpm run clean",
+    "build": "tsc --project tsconfig.source.json",
+    "clean": "rm -rf lib/",
+    "check:write": "biome check --write .",
+    "format": "biome format .",
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit",
+    "start": "homebridge -D --plugin-path .",
+    "pretest": "pnpm run lint && pnpm run typecheck",
+    "test": "pnpm run test:only",
+    "test:only": "vitest run"
+  },
+  "dependencies": {
+    "@micthiesen/mitools": "^2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.4",
+    "@types/node": "^24",
+    "hap-nodejs": "~0.14.3",
+    "homebridge": "~2.1.1",
+    "typescript": "~6.0.2",
+    "vitest": "^4.1.10"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "homebridge": "^1.8.0 || ^2.0.0",
+    "node": ">=18"
+  }
+}

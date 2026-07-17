@@ -1,0 +1,60 @@
+name: Build and deploy to npm
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".node-version"
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Test
+        run: pnpm run test:only
+
+      - name: Publish to npm
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          PACKAGE=$(node -p "require('./package.json').name")
+          OUTPUT=$(pnpm publish --provenance --access public --no-git-checks 2>&1) || {
+            if echo "$OUTPUT" | grep -q "cannot publish over the previously published"; then
+              echo "${PACKAGE}@${VERSION} already published, skipping"
+              exit 0
+            fi
+            echo "$OUTPUT" >&2
+            exit 1
+          }
+          echo "$OUTPUT"

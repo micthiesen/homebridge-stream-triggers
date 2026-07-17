@@ -1,0 +1,83 @@
+{
+  "pluginAlias": "StreamTriggers",
+  "pluginType": "platform",
+  "singular": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "default": "Stream Triggers"
+      },
+      "channels": {
+        "title": "Channels",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "title": "Key",
+              "description": "Short unique id, e.g. \"destiny\". Also seeds the accessory UUID.",
+              "type": "string",
+              "required": true
+            },
+            "displayName": {
+              "title": "Display Name",
+              "description": "Defaults to the capitalized key.",
+              "type": "string"
+            },
+            "type": {
+              "title": "Type",
+              "type": "string",
+              "oneOf": [
+                { "title": "YouTube", "enum": ["youtube"] },
+                { "title": "Twitch", "enum": ["twitch"] }
+              ],
+              "required": true
+            },
+            "url": {
+              "title": "URL",
+              "description": "Channel live page (required for YouTube), e.g. https://www.youtube.com/@destiny/live",
+              "type": "string"
+            }
+          }
+        }
+      },
+      "credentialsDir": {
+        "title": "Credentials Directory",
+        "description": "Where homebridge-appletv-enhanced stores Apple TV pairings.",
+        "type": "string",
+        "default": "/var/lib/homebridge/appletv-enhanced"
+      },
+      "appleTvId": {
+        "title": "Apple TV ID",
+        "description": "Defaults to auto-discovery: the single subdirectory of the credentials directory containing a credentials.txt.",
+        "type": "string"
+      },
+      "atvremotePath": {
+        "title": "atvremote Path",
+        "description": "atvremote binary from appletv-enhanced's venv.",
+        "type": "string",
+        "default": "/var/lib/homebridge/appletv-enhanced/.venv/bin/atvremote"
+      },
+      "ytDlpPath": {
+        "title": "yt-dlp Path",
+        "description": "Override for testing. Defaults to a self-managed binary that is downloaded and refreshed automatically.",
+        "type": "string"
+      },
+      "suffix": {
+        "title": "Switch Name Suffix",
+        "description": "Appended to switch display names to avoid collisions with HomeKit scene names.",
+        "type": "string",
+        "default": " Trigger"
+      },
+      "resetDelay": {
+        "title": "Reset Delay (ms)",
+        "description": "How long a switch reads \"on\" before auto-resetting to off.",
+        "type": "number",
+        "default": 2000
+      }
+    }
+  }
+}
