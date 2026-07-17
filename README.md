@@ -69,7 +69,7 @@ A static list can be set instead (mainly for testing; it disables fetching entir
 | --- | --- | --- |
 | `key` | yes | Short unique id (e.g. `destiny`). Seeds the accessory UUID, so it's stable across restarts. |
 | `type` | yes | `youtube`, `twitch`, or `kick`. |
-| `url` | youtube | YouTube: the channel's live page, e.g. `https://www.youtube.com/@destiny/live` (required). Kick: the channel link, e.g. `https://kick.com/vinesauce` (optional; tried as a deep link, falls back to opening the app). |
+| `url` | youtube | YouTube: the channel's live page, e.g. `https://www.youtube.com/@destiny/live` (required). Twitch/Kick: optional; when set it is tried as a deep link, falling back to opening the app if the command is rejected. |
 | `displayName` | no | Defaults to the capitalized key. The switch is named `<displayName><suffix>` (e.g. `Destiny Trigger`). |
 
 ### Platform options

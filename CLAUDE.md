@@ -85,13 +85,17 @@ Every atvremote call: `atvremote --id <appleTvId> --companion-credentials <creds
 3. youtube: `yt-dlp --print id --no-warnings <url>`; non-zero exit or empty output = not
    live → log and stop (expected, not an error). Else
    `launch_app=youtube://www.youtube.com/watch?v=<id>`.
-   twitch: `launch_app=tv.twitch` (no deep links on tvOS).
-   kick: `launch_app=<https://kick.com/user>` (universal link; kick.com's AASA claims
-   `https://kick.com/*` for `com.kick.mobile`, but no public `kick://` scheme exists and
-   tvOS deep-link handling is UNVERIFIED — needs on-device testing). If the deep link
-   command fails, falls back to `launch_app=com.kick.mobile` (tvOS 18+). If on-device
-   testing shows the deep link "succeeds" but does nothing, drop the url in omni-notify's
-   `toTriggerChannels` so kick channels just open the app.
+   twitch/kick: a channel `url` is tried as a deep link (`launch_app=<url>`), falling
+   back to opening the app (`tv.twitch` / `com.kick.mobile`) if the command is rejected;
+   without a url the app is opened directly. What omni-notify currently sends: kick WITH
+   the universal link url (kick.com's AASA claims `https://kick.com/*` for
+   `com.kick.mobile`; tvOS handling UNVERIFIED), twitch WITHOUT a url (tvOS deep links
+   almost certainly dead post-2023 TV-client rewrite; a Jan 2024 field test of every
+   `twitch://`/https form via pyatv failed — but 30.x builds were never tested).
+   On-device test plans for both live in `~/.research/appletv-deep-links.md`; if a
+   working form is found, add the url in omni-notify's `toTriggerChannels`. If a deep
+   link "succeeds" but does nothing (silent no-op), drop that url in omni-notify so the
+   channel just opens the app without the wasted attempt.
 
 ### Self-managed yt-dlp
 

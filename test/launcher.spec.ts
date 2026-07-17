@@ -65,6 +65,33 @@ describe("StreamLauncher", () => {
     ]);
   });
 
+  it("tries a twitch url as a deep link when one is provided", async () => {
+    const launcher = await makeLauncher();
+    await launcher.launch({
+      key: "jerma",
+      type: "twitch",
+      url: "https://www.twitch.tv/jerma985",
+    });
+
+    const lines = await readStubLog(stubLog);
+    expect(lines.at(-1)).toContain("launch_app=https://www.twitch.tv/jerma985");
+  });
+
+  it("falls back to the Twitch app when the deep link is rejected", async () => {
+    process.env.ATV_STUB_MODE = "fail_deeplink";
+    const launcher = await makeLauncher();
+    await launcher.launch({
+      key: "jerma",
+      type: "twitch",
+      url: "https://www.twitch.tv/jerma985",
+    });
+
+    const lines = await readStubLog(stubLog);
+    expect(lines.at(-2)).toContain("launch_app=https://www.twitch.tv/jerma985");
+    expect(lines.at(-1)).toContain("launch_app=tv.twitch");
+    expect(captured.messages.join("\n")).toContain("Deep link rejected");
+  });
+
   it("launches a kick channel via its universal link", async () => {
     const launcher = await makeLauncher();
     await launcher.launch({
@@ -93,7 +120,7 @@ describe("StreamLauncher", () => {
     const lines = await readStubLog(stubLog);
     expect(lines.at(-2)).toContain("launch_app=https://kick.com/vinesauce");
     expect(lines.at(-1)).toContain("launch_app=com.kick.mobile");
-    expect(captured.messages.join("\n")).toContain("Kick deep link rejected");
+    expect(captured.messages.join("\n")).toContain("Deep link rejected");
   });
 
   it("opens the Kick app directly when a kick channel has no url", async () => {
