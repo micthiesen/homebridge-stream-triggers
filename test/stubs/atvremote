@@ -9,5 +9,13 @@ case "${ATV_STUB_MODE:-ok}" in
   slow)
     sleep 0.4
     ;;
+  fail_deeplink)
+    case "$@" in
+      *launch_app=https*)
+        echo "pyatv: app launch failed" >&2
+        exit 1
+        ;;
+    esac
+    ;;
 esac
 exit 0

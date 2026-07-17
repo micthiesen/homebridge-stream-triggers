@@ -23,7 +23,11 @@ When a switch flips on (e.g. via a "Stream Destiny" HomeKit scene):
    video id. If the channel isn't live, the launch stops there (TV awake, nothing playing).
 4. **Launch** — `atvremote launch_app=youtube://www.youtube.com/watch?v=<id>` for YouTube,
    or `launch_app=tv.twitch` for Twitch (the tvOS Twitch app has no deep links; opening
-   the app is the intended behavior).
+   the app is the intended behavior). For Kick, the channel's universal link
+   (`https://kick.com/<user>`) is tried as a deep link — kick.com's app-site-association
+   claims all its URLs for the app, but tvOS handling is unverified — and if the command
+   is rejected the plugin falls back to just opening the Kick app (`com.kick.mobile`,
+   requires tvOS 18+).
 
 The switch is momentary: it auto-resets to off after `resetDelay` ms, and the launch runs
 fire-and-forget in the background. Repeat flips while a launch is in flight are ignored.
@@ -64,8 +68,8 @@ A static list can be set instead (mainly for testing; it disables fetching entir
 | Field | Required | Description |
 | --- | --- | --- |
 | `key` | yes | Short unique id (e.g. `destiny`). Seeds the accessory UUID, so it's stable across restarts. |
-| `type` | yes | `youtube` or `twitch`. |
-| `url` | youtube only | The channel's live page, e.g. `https://www.youtube.com/@destiny/live`. |
+| `type` | yes | `youtube`, `twitch`, or `kick`. |
+| `url` | youtube | YouTube: the channel's live page, e.g. `https://www.youtube.com/@destiny/live` (required). Kick: the channel link, e.g. `https://kick.com/vinesauce` (optional; tried as a deep link, falls back to opening the app). |
 | `displayName` | no | Defaults to the capitalized key. The switch is named `<displayName><suffix>` (e.g. `Destiny Trigger`). |
 
 ### Platform options

@@ -35,7 +35,7 @@ describe("parseConfig", () => {
 
   it("rejects an unknown channel type", () => {
     expect(() =>
-      parseConfig({ channels: [{ key: "x", type: "kick" }] }),
+      parseConfig({ channels: [{ key: "x", type: "rumble" }] }),
     ).toThrowError();
   });
 });

@@ -11,6 +11,8 @@ import type { YtDlp } from "./ytdlp.js";
  * client has requested the app list once (documented pyatv FAQ behavior). Priming on
  * every launch keeps the system self-healing across tvOS updates.
  */
+const KICK_APP_ID = "com.kick.mobile";
+
 export class StreamLauncher {
   constructor(
     private readonly log: Logging,
@@ -33,7 +35,17 @@ export class StreamLauncher {
       const uri = await this.resolveUri(channel, prefix);
       if (!uri) return;
 
-      if (!(await this.atv.run(`launch_app=${uri}`, prefix))) return;
+      if (!(await this.atv.run(`launch_app=${uri}`, prefix))) {
+        // The Kick deep link (https://kick.com/<user> universal link) is
+        // unverified on tvOS; if it's rejected, opening the app still beats
+        // doing nothing.
+        if (channel.type === "kick" && uri !== KICK_APP_ID) {
+          this.log.warn(`${prefix} Kick deep link rejected; opening the Kick app`);
+          if (!(await this.atv.run(`launch_app=${KICK_APP_ID}`, prefix))) return;
+          this.log.info(`${prefix} Launched ${KICK_APP_ID}`);
+        }
+        return;
+      }
       this.log.info(`${prefix} Launched ${uri}`);
     } catch (error) {
       this.log.error(`${prefix} Launch failed unexpectedly: ${String(error)}`);
@@ -47,6 +59,11 @@ export class StreamLauncher {
     if (channel.type === "twitch") {
       // The tvOS Twitch app has no deep links; opening the app is the intended behavior.
       return "tv.twitch";
+    }
+    if (channel.type === "kick") {
+      // Try the universal link (kick.com's AASA claims https://kick.com/*);
+      // without a url, just open the app.
+      return channel.url ?? KICK_APP_ID;
     }
     if (!channel.url) {
       this.log.error(`${prefix} YouTube channel is missing "url"`);

@@ -86,6 +86,12 @@ Every atvremote call: `atvremote --id <appleTvId> --companion-credentials <creds
    live → log and stop (expected, not an error). Else
    `launch_app=youtube://www.youtube.com/watch?v=<id>`.
    twitch: `launch_app=tv.twitch` (no deep links on tvOS).
+   kick: `launch_app=<https://kick.com/user>` (universal link; kick.com's AASA claims
+   `https://kick.com/*` for `com.kick.mobile`, but no public `kick://` scheme exists and
+   tvOS deep-link handling is UNVERIFIED — needs on-device testing). If the deep link
+   command fails, falls back to `launch_app=com.kick.mobile` (tvOS 18+). If on-device
+   testing shows the deep link "succeeds" but does nothing, drop the url in omni-notify's
+   `toTriggerChannels` so kick channels just open the app.
 
 ### Self-managed yt-dlp
 

@@ -46,13 +46,14 @@
               "type": "string",
               "oneOf": [
                 { "title": "YouTube", "enum": ["youtube"] },
-                { "title": "Twitch", "enum": ["twitch"] }
+                { "title": "Twitch", "enum": ["twitch"] },
+                { "title": "Kick", "enum": ["kick"] }
               ],
               "required": true
             },
             "url": {
               "title": "URL",
-              "description": "Channel live page (required for YouTube), e.g. https://www.youtube.com/@destiny/live",
+              "description": "YouTube: channel live page (required), e.g. https://www.youtube.com/@destiny/live. Kick: channel link (optional), e.g. https://kick.com/vinesauce, tried as a deep link.",
               "type": "string"
             }
           }

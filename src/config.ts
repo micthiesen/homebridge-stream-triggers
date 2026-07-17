@@ -3,7 +3,8 @@ import { z } from "zod";
 export const channelSchema = z.object({
   key: z.string().min(1),
   displayName: z.string().min(1).optional(),
-  type: z.enum(["youtube", "twitch"]),
+  type: z.enum(["youtube", "twitch", "kick"]),
+  /** youtube: live page for yt-dlp. kick: universal link tried as a deep link. */
   url: z.string().min(1).optional(),
 });
 

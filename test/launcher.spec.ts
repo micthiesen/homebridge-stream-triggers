@@ -65,6 +65,45 @@ describe("StreamLauncher", () => {
     ]);
   });
 
+  it("launches a kick channel via its universal link", async () => {
+    const launcher = await makeLauncher();
+    await launcher.launch({
+      key: "vinesauce",
+      type: "kick",
+      url: "https://kick.com/vinesauce",
+    });
+
+    const lines = await readStubLog(stubLog);
+    expect(lines).toEqual([
+      "atvremote --id AA:BB --companion-credentials SECRET123 turn_on",
+      "atvremote --id AA:BB --companion-credentials SECRET123 app_list",
+      "atvremote --id AA:BB --companion-credentials SECRET123 launch_app=https://kick.com/vinesauce",
+    ]);
+  });
+
+  it("falls back to opening the Kick app when the deep link is rejected", async () => {
+    process.env.ATV_STUB_MODE = "fail_deeplink";
+    const launcher = await makeLauncher();
+    await launcher.launch({
+      key: "vinesauce",
+      type: "kick",
+      url: "https://kick.com/vinesauce",
+    });
+
+    const lines = await readStubLog(stubLog);
+    expect(lines.at(-2)).toContain("launch_app=https://kick.com/vinesauce");
+    expect(lines.at(-1)).toContain("launch_app=com.kick.mobile");
+    expect(captured.messages.join("\n")).toContain("Kick deep link rejected");
+  });
+
+  it("opens the Kick app directly when a kick channel has no url", async () => {
+    const launcher = await makeLauncher();
+    await launcher.launch({ key: "vinesauce", type: "kick" });
+
+    const lines = await readStubLog(stubLog);
+    expect(lines.at(-1)).toContain("launch_app=com.kick.mobile");
+  });
+
   it("stops cleanly after the prime when the channel is not live", async () => {
     process.env.YTDLP_STUB_MODE = "notlive";
     const launcher = await makeLauncher();
