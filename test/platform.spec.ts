@@ -8,6 +8,8 @@ import {
   makeLog,
   makeStubEnv,
   readStubLog,
+  refusedUrl,
+  serveJson,
   YTDLP_STUB,
 } from "./helpers.js";
 
@@ -222,6 +224,79 @@ describe("accessory sync", () => {
 
     expect(harness.registered).toEqual([]);
     expect(harness.captured.messages.join("\n")).toContain("Invalid config");
+  });
+});
+
+describe("channel fetching", () => {
+  it("fetches channels from the endpoint and registers switches", async () => {
+    const server = await serveJson(() => ({
+      body: { channels: [{ key: "jerma", displayName: "Jerma", type: "twitch" }] },
+    }));
+    const harness = makeHarness(
+      dir,
+      channelConfig({ channelsUrl: server.url, channelsRefreshInterval: 0 }),
+    );
+    harness.boot();
+
+    await vi.waitFor(() => {
+      expect(harness.registered.map((a) => a.displayName)).toEqual(["Jerma Trigger"]);
+    });
+    expect(harness.registered[0]?.context.channel).toMatchObject({ key: "jerma" });
+    await server.close();
+  });
+
+  it("falls back to cached accessories (still functional) when unreachable", async () => {
+    const harness = makeHarness(
+      dir,
+      channelConfig({ channelsUrl: await refusedUrl(), channelsRefreshInterval: 0 }),
+    );
+    const cached = new FakeAccessory(
+      "Jerma Trigger",
+      "uuid-homebridge-stream-triggers.jerma",
+    );
+    cached.context.channel = { key: "jerma", type: "twitch" };
+    harness.cache(cached);
+    harness.boot();
+
+    await vi.waitFor(() => {
+      expect(harness.captured.messages.join("\n")).toContain(
+        "Channel list unavailable; running with 1 cached switch(es)",
+      );
+    });
+    expect(harness.registered).toEqual([]);
+    expect(harness.unregistered).toEqual([]);
+
+    // The cached switch still launches.
+    await cached.onCharacteristic().triggerSet(true);
+    await vi.waitFor(async () => {
+      expect((await readStubLog(stubLog)).join("\n")).toContain("launch_app=tv.twitch");
+    });
+  });
+
+  it("re-syncs on the refresh interval, picking up new channels", async () => {
+    const server = await serveJson((requestCount) => ({
+      body: {
+        channels:
+          requestCount === 1
+            ? [{ key: "jerma", displayName: "Jerma", type: "twitch" }]
+            : [
+                { key: "jerma", displayName: "Jerma", type: "twitch" },
+                { key: "vinesauce", displayName: "Vinesauce", type: "twitch" },
+              ],
+      },
+    }));
+    const harness = makeHarness(
+      dir,
+      channelConfig({ channelsUrl: server.url, channelsRefreshInterval: 50 }),
+    );
+    harness.boot();
+
+    await vi.waitFor(() => {
+      expect(harness.registered.map((a) => a.displayName)).toContain(
+        "Vinesauce Trigger",
+      );
+    });
+    await server.close();
   });
 });
 

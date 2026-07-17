@@ -8,8 +8,10 @@ import type {
   Service,
 } from "homebridge";
 import { AppleTv } from "./atv.js";
+import { fetchChannels } from "./channels.js";
 import {
   type ChannelConfig,
+  channelSchema,
   configSchema,
   displayNameFor,
   type StreamTriggersConfig,
@@ -17,6 +19,8 @@ import {
 import { StreamLauncher } from "./launcher.js";
 import { PLATFORM_NAME, PLUGIN_NAME } from "./settings.js";
 import { YtDlp } from "./ytdlp.js";
+
+const REFRESH_RETRY_MS = 60_000;
 
 export class StreamTriggersPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
@@ -50,14 +54,54 @@ export class StreamTriggersPlatform implements DynamicPlatformPlugin {
     this.launcher = new StreamLauncher(log, new AppleTv(log, this.config), this.ytDlp);
 
     api.on("didFinishLaunching", () => {
-      try {
-        this.syncAccessories();
-      } catch (error) {
-        this.log.error(`Failed to sync accessories: ${String(error)}`);
-      }
-      // Non-blocking: download/refresh the managed yt-dlp binary in the background.
-      void this.ytDlp.ensureFresh();
+      void this.startup();
     });
+  }
+
+  private async startup(): Promise<void> {
+    try {
+      if (this.config.channels.length > 0) {
+        // Static config override (mainly for testing); no fetching involved.
+        this.syncAccessories(this.config.channels);
+      } else {
+        const channels = await fetchChannels(this.config.channelsUrl, this.log);
+        if (channels) {
+          this.syncAccessories(channels);
+        } else {
+          this.wireCachedAccessories();
+        }
+        this.scheduleRefresh(
+          channels ? this.config.channelsRefreshInterval : REFRESH_RETRY_MS,
+        );
+      }
+    } catch (error) {
+      this.log.error(`Startup failed: ${String(error)}`);
+    }
+    // Non-blocking: download/refresh the managed yt-dlp binary in the background.
+    void this.ytDlp.ensureFresh();
+  }
+
+  /**
+   * Background re-sync so channel changes in omni-notify appear without a
+   * Homebridge restart. Failures retry sooner (covers omni-notify still
+   * booting after a host reboot) but never touch the current accessories.
+   */
+  private scheduleRefresh(delayMs: number): void {
+    if (this.config.channelsRefreshInterval <= 0) return;
+    const timer = setTimeout(async () => {
+      let nextDelayMs = REFRESH_RETRY_MS;
+      try {
+        const channels = await fetchChannels(this.config.channelsUrl, this.log);
+        if (channels) {
+          this.syncAccessories(channels);
+          nextDelayMs = this.config.channelsRefreshInterval;
+        }
+      } catch (error) {
+        this.log.error(`Channel refresh failed: ${String(error)}`);
+      }
+      this.scheduleRefresh(nextDelayMs);
+    }, delayMs);
+    timer.unref?.();
   }
 
   /** Called by Homebridge for each accessory restored from cache at startup. */
@@ -66,11 +110,11 @@ export class StreamTriggersPlatform implements DynamicPlatformPlugin {
     this.accessories.set(accessory.UUID, accessory);
   }
 
-  /** Register switches for configured channels; unregister ones no longer configured. */
-  private syncAccessories(): void {
+  /** Register switches for the given channels; unregister ones no longer present. */
+  private syncAccessories(channels: ChannelConfig[]): void {
     const configuredUuids = new Set<string>();
 
-    for (const channel of this.config.channels) {
+    for (const channel of channels) {
       if (channel.type === "youtube" && !channel.url) {
         this.log.error(`[${channel.key}] YouTube channel is missing "url"; skipping`);
         continue;
@@ -83,11 +127,13 @@ export class StreamTriggersPlatform implements DynamicPlatformPlugin {
       const existing = this.accessories.get(uuid);
       if (existing) {
         existing.displayName = name;
+        existing.context.channel = channel;
         this.setUpSwitch(existing, channel, name);
         this.api.updatePlatformAccessories([existing]);
-        this.log.info(`[${channel.key}] Updated switch "${name}"`);
+        this.log.debug(`[${channel.key}] Updated switch "${name}"`);
       } else {
         const accessory = new this.api.platformAccessory(name, uuid);
+        accessory.context.channel = channel;
         this.setUpSwitch(accessory, channel, name);
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
         this.accessories.set(uuid, accessory);
@@ -101,6 +147,28 @@ export class StreamTriggersPlatform implements DynamicPlatformPlugin {
       this.accessories.delete(uuid);
       this.log.info(`Unregistered switch "${accessory.displayName}" (channel removed)`);
     }
+  }
+
+  /**
+   * Fallback when the channel list is unreachable at startup: wire switches
+   * from the channel stored in each cached accessory's context, so everything
+   * previously known keeps working. Nothing is registered or unregistered.
+   */
+  private wireCachedAccessories(): void {
+    let wired = 0;
+    for (const accessory of this.accessories.values()) {
+      const channel = channelSchema.safeParse(accessory.context.channel);
+      if (!channel.success) {
+        this.log.warn(
+          `Cached accessory "${accessory.displayName}" has no stored channel; ` +
+            `it stays inert until the channel list is reachable`,
+        );
+        continue;
+      }
+      this.setUpSwitch(accessory, channel.data, accessory.displayName);
+      wired++;
+    }
+    this.log.warn(`Channel list unavailable; running with ${wired} cached switch(es)`);
   }
 
   private setUpSwitch(

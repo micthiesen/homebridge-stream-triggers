@@ -1,4 +1,6 @@
 import fs from "node:fs/promises";
+import http from "node:http";
+import type { AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import type { Logging } from "homebridge";
@@ -51,6 +53,37 @@ export async function readStubLog(stubLog: string): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+export interface TestJsonServer {
+  url: string;
+  close: () => Promise<void>;
+}
+
+/** Throwaway local HTTP server; the handler gets the 1-based request count. */
+export async function serveJson(
+  handler: (requestCount: number) => { status?: number; body: unknown },
+): Promise<TestJsonServer> {
+  let count = 0;
+  const server = http.createServer((_req, res) => {
+    count += 1;
+    const { status = 200, body } = handler(count);
+    res.writeHead(status, { "content-type": "application/json" });
+    res.end(JSON.stringify(body));
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address() as AddressInfo;
+  return {
+    url: `http://127.0.0.1:${port}/api/trigger-channels`,
+    close: () => new Promise((resolve) => server.close(() => resolve())),
+  };
+}
+
+/** A URL that refuses connections immediately (a just-closed server's port). */
+export async function refusedUrl(): Promise<string> {
+  const server = await serveJson(() => ({ body: {} }));
+  await server.close();
+  return server.url;
 }
 
 /** Create <dir>/credentials/<id>/credentials.txt and return the credentials dir. */

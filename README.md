@@ -30,15 +30,30 @@ fire-and-forget in the background. Repeat flips while a launch is in flight are 
 
 ## Configuration
 
+Zero-config by default: the channel list is fetched from
+[omni-notify](https://github.com/micthiesen/omni-notify)'s `/api/trigger-channels`
+endpoint (one channel per monitored streamer, YouTube preferred over Twitch, Kick-only
+streamers skipped), so adding a streamer there is all it takes.
+
+```json
+{
+  "platform": "StreamTriggers"
+}
+```
+
+The list re-syncs hourly (`channelsRefreshInterval`), so new streamers appear without a
+restart. If omni-notify is unreachable at startup, previously-known switches keep working
+from the accessory cache (the channel is stored in each accessory's context) and fetching
+retries every minute until it succeeds.
+
+A static list can be set instead (mainly for testing; it disables fetching entirely):
+
 ```json
 {
   "platform": "StreamTriggers",
   "channels": [
-    { "key": "destiny",   "type": "youtube", "url": "https://www.youtube.com/@destiny/live" },
-    { "key": "hutch",     "type": "youtube", "url": "https://www.youtube.com/@Hutch/live" },
-    { "key": "wilburgur", "type": "youtube", "url": "https://www.youtube.com/@Wilburgur/live" },
-    { "key": "vinesauce", "type": "twitch" },
-    { "key": "jerma",     "type": "twitch" }
+    { "key": "destiny", "type": "youtube", "url": "https://www.youtube.com/@destiny/live" },
+    { "key": "jerma",   "type": "twitch" }
   ]
 }
 ```
@@ -56,6 +71,8 @@ fire-and-forget in the background. Repeat flips while a launch is in flight are 
 
 | Field | Default | Description |
 | --- | --- | --- |
+| `channelsUrl` | `http://omni.boris/api/trigger-channels` | Endpoint serving the channel list; used when `channels` is empty. |
+| `channelsRefreshInterval` | `3600000` (1h) | How often (ms) to re-fetch the list and re-sync switches. `0` disables background refresh. |
 | `credentialsDir` | `/var/lib/homebridge/appletv-enhanced` | Where homebridge-appletv-enhanced stores Apple TV pairings. |
 | `appleTvId` | auto | Apple TV identifier. Auto-discovered as the single subdirectory of `credentialsDir` containing a `credentials.txt`; set explicitly if there are multiple. |
 | `atvremotePath` | `<credentialsDir>/.venv/bin/atvremote` path | `atvremote` binary from appletv-enhanced's venv (that plugin keeps pyatv updated). |

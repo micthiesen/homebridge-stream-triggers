@@ -39,6 +39,13 @@ pnpm run test:only     # vitest only
   fire-and-forget trigger dispatch with per-channel in-flight dedup
 - `src/config.ts` — Zod schema + `parseConfig` (safeParse'd in the platform: invalid
   config logs an error and runs with no channels, never crashes)
+- `src/channels.ts` — fetches the channel list from omni-notify's
+  `/api/trigger-channels` (see `../omni-notify/src/live-check/triggerChannels.ts`).
+  Zero-config default: no `channels` in config → fetch from `channelsUrl`
+  (`http://omni.boris/api/trigger-channels`), re-sync every `channelsRefreshInterval`
+  (1h; failures retry every 60s). Unreachable at startup → cached accessories are wired
+  from `accessory.context.channel` so known switches keep working. A non-empty
+  `channels` config is a static override that disables fetching (used by tests/smoke).
 - `src/launcher.ts` — the launch flow (wake -> app_list prime -> resolve -> launch_app)
 - `src/atv.ts` — `AppleTv`: atvremote wrapper, Apple TV id auto-discovery, companion
   credentials from appletv-enhanced's pairing files
@@ -118,5 +125,4 @@ Omit `ytDlpPath` in that config to exercise the real self-managed download (~36 
 
 ## Open questions / later ideas
 
-- Optionally source the channel list from a new endpoint on `../omni-notify` (sibling
-  compose service on the same host) instead of hardcoding channels in config. Not decided.
+(none currently)

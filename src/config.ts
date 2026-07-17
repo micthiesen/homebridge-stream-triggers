@@ -10,7 +10,11 @@ export const channelSchema = z.object({
 export type ChannelConfig = z.infer<typeof channelSchema>;
 
 export const configSchema = z.object({
+  /** Static override; when empty the list is fetched from channelsUrl. */
   channels: z.array(channelSchema).default([]),
+  channelsUrl: z.string().default("http://omni.boris/api/trigger-channels"),
+  /** How often to re-fetch the channel list and re-sync switches. 0 disables. */
+  channelsRefreshInterval: z.number().int().nonnegative().default(3_600_000),
   credentialsDir: z.string().default("/var/lib/homebridge/appletv-enhanced"),
   appleTvId: z.string().optional(),
   atvremotePath: z

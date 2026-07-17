@@ -10,8 +10,21 @@
         "type": "string",
         "default": "Stream Triggers"
       },
+      "channelsUrl": {
+        "title": "Channels URL",
+        "description": "Endpoint serving the channel list (omni-notify's /api/trigger-channels). Used when the static channel list below is empty.",
+        "type": "string",
+        "default": "http://omni.boris/api/trigger-channels"
+      },
+      "channelsRefreshInterval": {
+        "title": "Channel Refresh Interval (ms)",
+        "description": "How often to re-fetch the channel list and re-sync switches. 0 disables background refresh.",
+        "type": "number",
+        "default": 3600000
+      },
       "channels": {
-        "title": "Channels",
+        "title": "Channels (static override)",
+        "description": "Optional static channel list. When non-empty, the Channels URL is never fetched.",
         "type": "array",
         "items": {
           "type": "object",
