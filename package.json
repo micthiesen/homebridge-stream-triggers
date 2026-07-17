@@ -2,7 +2,7 @@
   "name": "homebridge-stream-triggers",
   "displayName": "Homebridge Stream Triggers",
   "version": "1.3.0",
-  "description": "HomeKit switches that launch live streams (YouTube/Twitch) on an Apple TV via atvremote and yt-dlp.",
+  "description": "HomeKit switches that launch live streams (YouTube/Twitch/Kick) on an Apple TV via atvremote and yt-dlp.",
   "keywords": [
     "homebridge-plugin",
     "homebridge",
