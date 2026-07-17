@@ -1,0 +1,13 @@
+#!/bin/sh
+# Test stub for atvremote: records its argv, optionally fails or stalls.
+echo "atvremote $@" >> "${STUB_LOG:?STUB_LOG not set}"
+case "${ATV_STUB_MODE:-ok}" in
+  fail)
+    echo "pyatv: something went wrong" >&2
+    exit 1
+    ;;
+  slow)
+    sleep 0.4
+    ;;
+esac
+exit 0

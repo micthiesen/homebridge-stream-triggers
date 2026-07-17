@@ -35,12 +35,20 @@ pnpm run test:only     # vitest only
   config.schema.json) and `PLUGIN_NAME`
 - `src/platform.ts` — `StreamTriggersPlatform` (DynamicPlatformPlugin): caches restored
   accessories in `configureAccessory`, syncs switches to config on `didFinishLaunching`
-  (register new / update existing / unregister removed), momentary switch semantics
+  (register new / update existing / unregister removed), momentary switch semantics,
+  fire-and-forget trigger dispatch with per-channel in-flight dedup
 - `src/config.ts` — Zod schema + `parseConfig` (safeParse'd in the platform: invalid
   config logs an error and runs with no channels, never crashes)
+- `src/launcher.ts` — the launch flow (wake -> app_list prime -> resolve -> launch_app)
+- `src/atv.ts` — `AppleTv`: atvremote wrapper, Apple TV id auto-discovery, companion
+  credentials from appletv-enhanced's pairing files
+- `src/ytdlp.ts` — `YtDlp`: self-managed binary (download/refresh) + live-video-id resolve
+- `src/exec.ts` — `runCommand` (execFile + timeout returning `Result`) and error describers
 - `config.schema.json` — Homebridge UI form (per-property `"required": true` inside array
   items is the UI convention, unlike standard JSON Schema)
-- `test/` — vitest specs
+- `test/` — vitest specs; `test/stubs/` has executable `atvremote`/`yt-dlp` shell stubs
+  that record argv to `$STUB_LOG` (behavior via `ATV_STUB_MODE`/`YTDLP_STUB_MODE`), so
+  integration tests exercise real subprocess spawning end to end
 
 ## Robustness rules (the entire point of this plugin)
 
@@ -93,9 +101,22 @@ Kasa-style: bump `version` in `package.json`, commit `chore: release vX.Y.Z`, ta
 `git push && git push --tags`, `gh release create`. CI publishes to npm on the `main` push
 (idempotent: skips if the version already exists).
 
+## Smoke testing against real Homebridge
+
+Run the real thing against a scratch storage dir (no HomeKit pairing needed to verify
+startup, registration, and cache sync — flip semantics are covered by the vitest
+integration tests, which spawn the real stub subprocesses):
+
+```bash
+pnpm run build
+# scratch dir needs config.json with a bridge section + this platform, pointing
+# atvremotePath at test/stubs/atvremote and credentialsDir at a fake pairing dir
+pnpm exec homebridge -D -U <scratch-dir> -P .
+```
+
+Omit `ytDlpPath` in that config to exercise the real self-managed download (~36 MB).
+
 ## Open questions / later ideas
 
 - Optionally source the channel list from a new endpoint on `../omni-notify` (sibling
   compose service on the same host) instead of hardcoding channels in config. Not decided.
-- Local smoke test before v1.0.0: `npx homebridge -D -U <scratch dir>` with stub
-  `atvremotePath`/`ytDlpPath` scripts (see spec in git history / README).

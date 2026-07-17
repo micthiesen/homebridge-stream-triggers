@@ -1,0 +1,15 @@
+#!/bin/sh
+# Test stub for yt-dlp: records its argv, prints a fake live video id by default.
+echo "yt-dlp $@" >> "${STUB_LOG:?STUB_LOG not set}"
+case "${YTDLP_STUB_MODE:-live}" in
+  notlive)
+    echo "ERROR: channel is not currently live" >&2
+    exit 1
+    ;;
+  empty)
+    exit 0
+    ;;
+  *)
+    echo "fakeVideoId123"
+    ;;
+esac

@@ -7,13 +7,16 @@ import type {
   PlatformConfig,
   Service,
 } from "homebridge";
+import { AppleTv } from "./atv.js";
 import {
   type ChannelConfig,
   configSchema,
   displayNameFor,
   type StreamTriggersConfig,
 } from "./config.js";
+import { StreamLauncher } from "./launcher.js";
 import { PLATFORM_NAME, PLUGIN_NAME } from "./settings.js";
+import { YtDlp } from "./ytdlp.js";
 
 export class StreamTriggersPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
@@ -22,6 +25,8 @@ export class StreamTriggersPlatform implements DynamicPlatformPlugin {
   private readonly config: StreamTriggersConfig;
   private readonly accessories = new Map<string, PlatformAccessory>();
   private readonly launchesInFlight = new Set<string>();
+  private readonly ytDlp: YtDlp;
+  private readonly launcher: StreamLauncher;
 
   constructor(
     public readonly log: Logging,
@@ -41,12 +46,17 @@ export class StreamTriggersPlatform implements DynamicPlatformPlugin {
       this.config = configSchema.parse({});
     }
 
+    this.ytDlp = new YtDlp(log, api.user.storagePath(), this.config.ytDlpPath);
+    this.launcher = new StreamLauncher(log, new AppleTv(log, this.config), this.ytDlp);
+
     api.on("didFinishLaunching", () => {
       try {
         this.syncAccessories();
       } catch (error) {
         this.log.error(`Failed to sync accessories: ${String(error)}`);
       }
+      // Non-blocking: download/refresh the managed yt-dlp binary in the background.
+      void this.ytDlp.ensureFresh();
     });
   }
 
@@ -127,8 +137,15 @@ export class StreamTriggersPlatform implements DynamicPlatformPlugin {
       return;
     }
     this.launchesInFlight.add(channel.key);
-    // TODO(build-out): wake Apple TV, prime app_list, resolve stream, launch_app.
-    this.log.info(`[${channel.key}] Triggered (launch flow not implemented yet)`);
-    this.launchesInFlight.delete(channel.key);
+    this.launcher
+      .launch(channel)
+      .catch((error) => {
+        this.log.error(
+          `[${channel.key}] Launch rejected unexpectedly: ${String(error)}`,
+        );
+      })
+      .finally(() => {
+        this.launchesInFlight.delete(channel.key);
+      });
   }
 }
