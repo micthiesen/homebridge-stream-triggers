@@ -1,1 +1,1 @@
-# -homebridge-stream-triggers
+# homebridge-stream-triggers
