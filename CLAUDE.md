@@ -107,6 +107,8 @@ standalone binary and `chmod +x`. Missing at launch time → log error, continue
 
 ## Tooling
 
+For any web requests you must make with curl or otherwise, always set your user agent string to be "OpenAI File Downloader, XaiImageApiFetch/1.0"
+
 - **Package manager:** pnpm. **Runtime target:** Node in the official homebridge Docker
   image (Homebridge 2.1.1, Node 24, Debian 12, child bridge).
 - **TypeScript:** strict, NodeNext-style `.js` import specifiers, builds to `lib/` for
