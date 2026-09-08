@@ -14,7 +14,7 @@ import type { YtDlp } from "./ytdlp.js";
 /**
  * App to open when a channel has no deep-link url, and the fallback when a
  * deep link is rejected. Twitch's tvOS client almost certainly ignores deep
- * links (see CLAUDE.md), so omni-notify sends twitch channels without a url;
+ * links (see AGENTS.md), so omni-notify sends twitch channels without a url;
  * a url can be supplied to experiment.
  */
 const FALLBACK_APP_IDS = { twitch: "tv.twitch", kick: "com.kick.mobile" } as const;
