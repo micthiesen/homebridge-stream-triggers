@@ -21,8 +21,8 @@ This is a living document — update it as conventions emerge; don't ask, just u
 
 ```bash
 pnpm run build         # tsc -> lib/ (tsconfig.source.json)
-pnpm run check:write   # Biome lint + format, auto-fix
-pnpm run lint          # Biome check
+pnpm run check:write   # oxlint + oxfmt, auto-fix
+pnpm run lint          # oxlint check
 pnpm run typecheck     # tsc --noEmit
 pnpm run test          # lint + typecheck + vitest
 pnpm run test:only     # vitest only
@@ -113,7 +113,7 @@ For any web requests you must make with curl or otherwise, always set your user 
   image (Homebridge 2.1.1, Node 24, Debian 12, child bridge).
 - **TypeScript:** strict, NodeNext-style `.js` import specifiers, builds to `lib/` for
   publishing (`tsconfig.source.json`); `tsconfig.json` includes tests for typecheck.
-- **Biome** extends `@micthiesen/mitools/biome.shared.json`; **vitest** via mitools
+- **oxlint/oxfmt** use project-local configuration; **vitest** via mitools
   `baseVitestConfig`.
 - Strong types (discriminated unions, explicit returns), no debug leftovers, small modules.
 

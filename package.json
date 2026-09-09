@@ -31,26 +31,29 @@
     "prebuild": "pnpm run clean",
     "build": "tsc --project tsconfig.source.json",
     "clean": "rm -rf lib/",
-    "check:write": "biome check --write .",
-    "format": "biome format .",
-    "lint": "biome check .",
+    "check:write": "oxlint --fix --report-unused-disable-directives . && oxfmt --write .",
+    "format": "oxfmt --check .",
+    "lint": "oxlint --report-unused-disable-directives .",
     "typecheck": "tsc --noEmit",
     "start": "homebridge -D --plugin-path .",
-    "pretest": "pnpm run lint && pnpm run typecheck",
+    "pretest": "pnpm run check && pnpm run typecheck",
     "test": "pnpm run test:only",
-    "test:only": "vitest run"
+    "test:only": "vitest run",
+    "format:write": "oxfmt --write .",
+    "check": "pnpm run lint && pnpm run format"
   },
   "dependencies": {
     "@micthiesen/mitools": "^2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.4",
     "@types/node": "^24",
     "hap-nodejs": "~0.14.3",
     "homebridge": "~2.1.1",
-    "typescript": "~6.0.2",
-    "vitest": "^4.1.10"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10",
+    "oxlint": "1.80.0",
+    "oxfmt": "0.65.0"
   },
   "packageManager": "pnpm@10.33.0",
   "engines": {

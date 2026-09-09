@@ -89,7 +89,7 @@ A static list can be set instead (mainly for testing; it disables fetching entir
 
 ```bash
 pnpm install
-pnpm run check:write   # Biome lint + format (auto-fix)
+pnpm run check:write   # oxlint + oxfmt (auto-fix)
 pnpm run typecheck
 pnpm run test          # lint + typecheck + vitest
 pnpm run build         # tsc -> lib/
