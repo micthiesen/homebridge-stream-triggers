@@ -7,7 +7,7 @@ const responseSchema = z.object({ channels: z.array(channelSchema) });
 const FETCH_TIMEOUT_MS = 10_000;
 
 /**
- * Fetch the channel list from omni-notify's /api/trigger-channels endpoint.
+ * Fetch the channel list from omni's /api/trigger-channels endpoint.
  * Returns undefined on any failure (logged); callers fall back to the
  * accessory cache so previously-known switches keep working.
  */

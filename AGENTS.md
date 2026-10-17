@@ -14,7 +14,7 @@ This is a living document — update it as conventions emerge; don't ask, just u
   changes into the same push. Note: pushes to `main` publish to npm if `version` was bumped.
 - **Gate after any change:** `pnpm run check:write && pnpm run typecheck && pnpm run test`.
 - When unsure about tooling/structure/versions, check sibling projects under `~/Code`
-  (`homebridge-kasa` is the closest sibling; `omni-notify`, `condo`, `mitools` for newer
+  (`homebridge-kasa` is the closest sibling; `omni`, `condo`, `mitools` for newer
   house conventions) and match the house style.
 
 ## Commands
@@ -42,8 +42,8 @@ pnpm run test:only     # vitest only
   accessory sync/unregister — until the config is fixed; never crashes).
   `channelsRetryDelay` (default 60s) is the failed-fetch retry cadence, deliberately
   absent from config.schema.json; it exists so tests can exercise the retry path.
-- `src/channels.ts` — fetches the channel list from omni-notify's
-  `/api/trigger-channels` (see `../omni-notify/src/live-check/triggerChannels.ts`).
+- `src/channels.ts` — fetches the channel list from omni's
+  `/api/trigger-channels` (see `../omni/src/live-check/triggerChannels.ts`).
   Zero-config default: no `channels` in config → fetch from `channelsUrl`
   (`http://omni.boris/api/trigger-channels`), re-sync every `channelsRefreshInterval`
   (1h; failures retry every 60s). Unreachable at startup → cached accessories are wired
@@ -87,14 +87,14 @@ Every atvremote call: `atvremote --id <appleTvId> --companion-credentials <creds
    `launch_app=youtube://www.youtube.com/watch?v=<id>`.
    twitch/kick: a channel `url` is tried as a deep link (`launch_app=<url>`), falling
    back to opening the app (`tv.twitch` / `com.kick.mobile`) if the command is rejected;
-   without a url the app is opened directly. What omni-notify currently sends: kick WITH
+   without a url the app is opened directly. What omni currently sends: kick WITH
    the universal link url (kick.com's AASA claims `https://kick.com/*` for
    `com.kick.mobile`; tvOS handling UNVERIFIED), twitch WITHOUT a url (tvOS deep links
    almost certainly dead post-2023 TV-client rewrite; a Jan 2024 field test of every
    `twitch://`/https form via pyatv failed — but 30.x builds were never tested).
    On-device test plans for both live in `~/.research/appletv-deep-links.md`; if a
-   working form is found, add the url in omni-notify's `toTriggerChannels`. If a deep
-   link "succeeds" but does nothing (silent no-op), drop that url in omni-notify so the
+   working form is found, add the url in omni's `toTriggerChannels`. If a deep
+   link "succeeds" but does nothing (silent no-op), drop that url in omni so the
    channel just opens the app without the wasted attempt.
 
 ### Self-managed yt-dlp

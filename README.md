@@ -35,7 +35,7 @@ fire-and-forget in the background. Repeat flips while a launch is in flight are 
 ## Configuration
 
 Zero-config by default: the channel list is fetched from
-[omni-notify](https://github.com/micthiesen/omni-notify)'s `/api/trigger-channels`
+[omni](https://github.com/micthiesen/omni)'s `/api/trigger-channels`
 endpoint (one channel per monitored streamer, YouTube preferred over Twitch, Kick-only
 streamers skipped), so adding a streamer there is all it takes.
 
@@ -46,7 +46,7 @@ streamers skipped), so adding a streamer there is all it takes.
 ```
 
 The list re-syncs hourly (`channelsRefreshInterval`), so new streamers appear without a
-restart. If omni-notify is unreachable at startup, previously-known switches keep working
+restart. If omni is unreachable at startup, previously-known switches keep working
 from the accessory cache (the channel is stored in each accessory's context) and fetching
 retries every minute until it succeeds. Setting `channelsRefreshInterval` to `0` disables
 all background fetching, including that startup retry.

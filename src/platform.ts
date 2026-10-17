@@ -91,8 +91,8 @@ export class StreamTriggersPlatform implements DynamicPlatformPlugin {
   }
 
   /**
-   * Background re-sync so channel changes in omni-notify appear without a
-   * Homebridge restart. Failures retry sooner (covers omni-notify still
+   * Background re-sync so channel changes in omni appear without a
+   * Homebridge restart. Failures retry sooner (covers omni still
    * booting after a host reboot) but never touch the current accessories.
    */
   private scheduleRefresh(delayMs: number): void {

@@ -12,7 +12,7 @@
       },
       "channelsUrl": {
         "title": "Channels URL",
-        "description": "Endpoint serving the channel list (omni-notify's /api/trigger-channels). Used when the static channel list below is empty.",
+        "description": "Endpoint serving the channel list (omni's /api/trigger-channels). Used when the static channel list below is empty.",
         "type": "string",
         "default": "http://omni.boris/api/trigger-channels"
       },
